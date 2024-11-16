@@ -33,6 +33,8 @@ min_amount_out = int(10 * 10**18)
 w3 = Web3(Web3.HTTPProvider(rpc_endpoint))
 account = Account.from_key(private_key)
 
+# Router Codec
+codec = RouterCodec()
 
 
 # Functions
@@ -90,18 +92,11 @@ def approve_token(Permit2_address, Permit2_abi, Sell_balance, Sell_contract, Sel
             p2_expiration,
             p2_nonce,
     )
-    return p2_nonce
-
-
-
-def buy_token(p2_nonce, sell_balance, sell_address, buy_address, amount_in, min_amount_out, ur_address, chain_id, use_token=False):
-
-    codec = RouterCodec()
-
+    
     # permit message
-    allowance_amount = sell_balance  # max/infinite
+    allowance_amount = permit2_allowance  # max/infinite
     permit_data, signable_message = codec.create_permit2_signable_message(
-            sell_address,
+            Sell_address,
             allowance_amount,
             codec.get_default_expiration(),  # 30 days
             p2_nonce,
@@ -111,10 +106,11 @@ def buy_token(p2_nonce, sell_balance, sell_address, buy_address, amount_in, min_
         )
 
     signed_message = account.sign_message(signable_message)
+    return signed_message
 
 
 
-
+def buy_token(sell_address, buy_address, amount_in, min_amount_out, ur_address, chain_id, use_token=False):
 
     encoded_input = (
             codec
@@ -169,11 +165,16 @@ print("SELL Token Balance before swap", SELL_balance)
 
 print("BUY Token Balance before swap", BUY_balance)
 
-p2_nonce = approve_token(permit2_address, permit2_abi, SELL_balance, SELL_contract, SELL_address, ur_address, chain_id)
+p2_nonce = approve_token(permit2_address, # Permit2 address
+                         permit2_abi, # Permit2 ABI 
+                         SELL_balance, # Amount of the sell token to approve 
+                         SELL_contract, # Sell contract 
+                         SELL_address, # Sell address 
+                         ur_address, # Universal Router address 
+                         chain_id # Chain ID
+                         )
 
-buy_token(p2_nonce, # p2_nonce
-          SELL_balance, # Balance of the sell coin for allowance purposes
-          SELL_address, # Address of the sell coin
+buy_token(SELL_address, # Address of the sell coin
           BUY_address, # Address of the buy coin 
           amount_in, # Amount of the sell coin to swap
           min_amount_out, # Minimum amount of the buy coin to receive 
